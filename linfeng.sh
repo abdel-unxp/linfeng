@@ -1,17 +1,96 @@
 #!/bin/sh
 
+get_chapter()
+{
+    ch=$1
+    url_format=$2
+    filename=""
+
+    # link format for chapter 464 and 465 are different from other
+    if [ ${ch} -eq 464 ];
+    then
+        wget http://totallyinsanetranlation.com/pmg-chapter-464-insane-laughter/
+        echo $?
+        return
+    fi
+    if [ ${ch} -eq 465 ];
+    then
+        wget http://totallyinsanetranlation.com/pmg-chapter-465-cursed-world/
+        echo $?
+        return
+    fi
+
+    case ${url_format} in
+        0)
+            # mosty used for chapter <= 450. But may be used in other chapter
+            wget http://totallyinsanetranlation.com/chapter-${ch}/
+            ;;
+        1)
+            # mostly used for chapter > 450.
+            wget http://totallyinsanetranlation.com/pmg-chapter-${ch}/
+            ;;
+        2)
+            filename=pmg*tchapter-${ch}
+            wget http://totallyinsanetranlation.com/pmg-tchapter-${ch}
+            ;;
+        3)
+            filename=pmg*${ch}
+            wget http://totallyinsanetranlation.com/pmg-${ch}
+            ;;
+        4)
+            filename=pmg*chapter-${ch}
+            wget http://totallyinsanetranlation.com/pmg-%E2%80%8Bchapter-${ch}
+            ;;
+    esac
+
+    # save return code of wget
+    ret=$?
+
+    # sometimes, web page are not stored in index.html.
+    # rename this page into index.html to make them similar to others page
+    if [ ! -z ${filename} ] && [ -e ${filename} ];
+    then
+        mv ${filename} index.html
+    fi
+
+    # return wget error code
+    echo ${ret}
+}
+
+url_format=0
+
 process_chapter()
 {
     ch=$1
     out="out_${ch}.html"
 
     rm -f index.html
-    if [ ${ch} -le 450 ]
-    then
-        wget http://totallyinsanetranlation.com/chapter-${ch}/
-    else
-        wget http://totallyinsanetranlation.com/pmg-chapter-${ch}/
-    fi
+
+    # they are 4 kinds of wb link format.
+    # All of them will be tried starting from last working one (ie: previous chapter)
+    for i in $(seq 0 4);
+    do
+        format=$(((url_format + i)%5))
+        echo "try format ${format}"
+        local ret=$(get_chapter ${ch} ${format})
+
+        # No valid url format found.
+        if [ $i -eq 4 ] && [ ${ret} -ne 0 ];
+        then
+            echo "********* ERROR on chapter ${ch} ******"
+            break
+        fi
+
+        # ok got a valid url format.
+        if [ ${ret} -eq 0 ];
+        then
+            # remember last working link format
+            url_format=${format}
+            break
+        fi
+
+    done
+
     html2text -nobs -style pretty -utf8 -width 1000 -o tmp1 index.html
     # remove all html code before chapter title and after end of chapter
     cat tmp1 |grep -i "share story" -B 1000 | grep Chapter -A 1000 > tmp2
@@ -39,8 +118,7 @@ process_chapter()
 }
 
 outputs=""
-i=0
-for i in `seq 1 2165`
+for i in `seq 1 2195`
 do
     if [ $(( $i  % 300 )) -eq 0 ]
     then
