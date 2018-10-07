@@ -124,7 +124,7 @@ for i in `seq 1 2195`
 do
     if [ $(( $i  % 300 )) -eq 0 ]
     then
-        j=$(($i-1))
+        j=$((1 + ($i-1)/300))
         echo "generate epub $j"
         pandoc -f html -t epub3  -o linfeng_$j.epub ${outputs}
         #pandoc -f html -t epub3 --epub-metadata=metadata.xml --epub-cover-image=cover1.jpg -o linfeng_$j.epub ${outputs}
