@@ -104,6 +104,8 @@ process_chapter()
     sed 's/--/<hr>/p' tmp2 > tmp1
     sed 's/--//g' tmp1 > tmp2
     head -n -1 tmp2 |uniq > tmp1
+    # remove last line "Next_chapter text"
+    grep -v "Previous_Chapter | Next_Chapter" tmp1 > tmp2
 
     echo '<html lang="en-US">' > ${out}
     echo '<head>' >> ${out}
@@ -112,7 +114,7 @@ process_chapter()
     echo '<body>' >> ${out}
     echo "<h1>${title}</h1>" >> ${out}
     echo '<p>' >> ${out}
-    cat tmp1 >> ${out}
+    cat tmp2 >> ${out}
     echo '</p>' >> ${out}
     echo '</body>' >> ${out}
 }
