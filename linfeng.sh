@@ -6,40 +6,23 @@ get_chapter()
     url_format=$2
     filename=""
 
-    # link format for chapter 464 and 465 are different from other
-    if [ ${ch} -eq 464 ];
-    then
-        wget http://totallyinsanetranlation.com/pmg-chapter-464-insane-laughter/
-        echo $?
-        return
-    fi
-    if [ ${ch} -eq 465 ];
-    then
-        wget http://totallyinsanetranlation.com/pmg-chapter-465-cursed-world/
-        echo $?
-        return
-    fi
-
     case ${url_format} in
         0)
-            # mosty used for chapter <= 450. But may be used in other chapter
-            wget http://totallyinsanetranlation.com/chapter-${ch}/
+            # mosty used for chapter <= 411. But may be used in other chapter
+            wget https://totallytranslations.com/pmg-chapter-${ch}
             ;;
         1)
-            # mostly used for chapter > 450.
-            wget http://totallyinsanetranlation.com/pmg-chapter-${ch}/
+            # mostly used for chapter >= 411.
+            filename=chapter-${ch}
+            wget https://totallytranslations.com/chapter-${ch}
             ;;
         2)
-            filename=pmg*tchapter-${ch}
-            wget http://totallyinsanetranlation.com/pmg-tchapter-${ch}
+            filename=pmg*chapter-${ch}
+            wget https://totallytranslations.com/pmg-%E2%80%8Bchapter-${ch}
             ;;
         3)
-            filename=pmg*${ch}
-            wget http://totallyinsanetranlation.com/pmg-${ch}
-            ;;
-        4)
-            filename=pmg*chapter-${ch}
-            wget http://totallyinsanetranlation.com/pmg-%E2%80%8Bchapter-${ch}
+            filename=pmg-tchapter-${ch}
+            wget https://totallytranslations.com/pmg-tchapter-${ch}
             ;;
     esac
 
@@ -50,7 +33,7 @@ get_chapter()
     # rename this page into index.html to make them similar to others page
     if [ ! -z ${filename} ] && [ -e ${filename} ];
     then
-        mv ${filename} index.html
+        mv ${filename} pmg-chapter-${ch}
     fi
 
     # return wget error code
@@ -64,18 +47,16 @@ process_chapter()
     ch=$1
     out="out_${ch}.html"
 
-    rm -f index.html
-
-    # they are 4 kinds of wb link format.
+    # they are 3 kinds of wb link format.
     # All of them will be tried starting from last working one (ie: previous chapter)
-    for i in $(seq 0 4);
+    for i in $(seq 0 3);
     do
-        format=$(((url_format + i)%5))
+        format=$(((url_format + i)%4))
         echo "try format ${format}"
         local ret=$(get_chapter ${ch} ${format})
 
         # No valid url format found.
-        if [ $i -eq 4 ] && [ ${ret} -ne 0 ];
+        if [ $i -eq 3 ] && [ ${ret} -ne 0 ];
         then
             echo "********* ERROR on chapter ${ch} ******"
             exit 1
@@ -91,21 +72,22 @@ process_chapter()
 
     done
 
-    html2text -nobs -style pretty -utf8 -width 1000 -o tmp1 index.html
+    html2text -nobs -style pretty -utf8 -width 1000 -o tmp1 pmg-chapter-${ch}
     # remove all html code before chapter title and after end of chapter
-    cat tmp1 |grep -i "share story" -B 1000 | grep Chapter -A 1000 > tmp2
+    cat tmp1 |grep -i "previous_chapter\|next_chapter" -B 10000 | grep -i "Chapter.*${ch}" -A 10000 > tmp2
     # make html more pretty by adding end of line balise
     sed ':a;N;$!ba;s/\n/<br>\n/g' tmp2 > tmp1
     # extract chapter's title
     title=`head -n 1 tmp1 |sed -e "s/_/ /g"|sed -e "s/<br>//g"`
     # remove unncessary html code (number of comments, etc...)
-    tail -n +9 tmp1 > tmp2
     # better html line
-    sed 's/--/<hr>/p' tmp2 > tmp1
-    sed 's/--//g' tmp1 > tmp2
-    head -n -1 tmp2 |uniq > tmp1
+    sed 's/--/<hr>/p' tmp1 > tmp2
+    sed 's/--//g' tmp2 > tmp1
+    # remove repeated title
+    grep  -i -v "Chapter.*${ch}" tmp1 |uniq > tmp2
     # remove last line "Next_chapter text"
-    grep -v "Previous_Chapter | Next_Chapter" tmp1 > tmp2
+    grep -i -v "Previous_Chapter" tmp2 | grep -i -v "Next_Chapter" | grep -i -v "Add to Library" > tmp1
+
     # check for empty page
     if [ $(wc -l < tmp1) -le 10 ];
     then
@@ -120,7 +102,7 @@ process_chapter()
     echo '<body>' >> ${out}
     echo "<h1>${title}</h1>" >> ${out}
     echo '<p>' >> ${out}
-    cat tmp2 >> ${out}
+    cat tmp1 >> ${out}
     echo '</p>' >> ${out}
     echo '</body>' >> ${out}
 }
