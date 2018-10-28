@@ -78,7 +78,7 @@ process_chapter()
         if [ $i -eq 4 ] && [ ${ret} -ne 0 ];
         then
             echo "********* ERROR on chapter ${ch} ******"
-            break
+            exit 1
         fi
 
         # ok got a valid url format.
@@ -106,6 +106,12 @@ process_chapter()
     head -n -1 tmp2 |uniq > tmp1
     # remove last line "Next_chapter text"
     grep -v "Previous_Chapter | Next_Chapter" tmp1 > tmp2
+    # check for empty page
+    if [ $(wc -l < tmp1) -le 10 ];
+    then
+        echo "************* ERROR on empty chapter ${ch}"
+        exit 1
+    fi
 
     echo '<html lang="en-US">' > ${out}
     echo '<head>' >> ${out}
