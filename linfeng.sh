@@ -146,7 +146,8 @@ done;
 
 if [ ! -z "${outputs}" ]
 then
-    echo "generate last epub $i"
+    j=$((1 + ($i-1)/300))
+    echo "generate last epub $j"
     #pandoc -f html -t epub3 --epub-metadata=metadata.xml --epub-cover-image=cover1.jpg -o linfeng_$i.epub ${outputs}
     pandoc -f html -t epub3  -o linfeng_$i.epub ${outputs}
 fi
